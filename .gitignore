@@ -1,0 +1,19 @@
+# Build artifacts
+build/
+out/
+*.o
+*.a
+*.elf
+*.bin
+*.hex
+*.map
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+
+# Logs
+*.log
