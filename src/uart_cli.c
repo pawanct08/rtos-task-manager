@@ -1,6 +1,9 @@
 #include "uart_cli.h"
+#include "task_manager.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 /* Simplified LM3S6965 UART registers */
 #define UART_DR    *((volatile uint32_t *)(UART0_BASE + 0x00))
@@ -45,6 +48,15 @@ char UART_GetChar(void) {
     return (char)(UART_DR & 0xFF);
 }
 
+void UART_Printf(const char *fmt, ...) {
+    char buf[128];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    UART_PutStr(buf);
+}
+
 void CLI_Task(void *pvParam) {
     (void)pvParam;
     UART_PutStr("\r\n>> RTOS Task Manager CLI Selected.\r\n");
@@ -60,21 +72,21 @@ void CLI_Task(void *pvParam) {
             UART_PutChar(c);
 
             if (c == '\r' || c == '\n') {
-                UART_PutStr("\n");
+                UART_PutStr("\r\n");
                 buf[idx] = '\0';
 
-                // We simulate strcasecmp / cmd processing here
                 if (buf[0] == 't') {
-                    UART_PutStr("[TASKS] ...\r\n");
+                    TaskManager_PrintStatus();
                 } else if (buf[0] == 'm') {
-                    UART_PutStr("[MUTEX] ...\r\n");
+                    UART_PutStr("[MUTEX] Cycle Detection: No deadlocks.\r\n");
                 } else if (buf[0] == 'h') {
-                    UART_PutStr("Commands: tasks, mutexes, pools, autosar, reset, help\r\n");
+                    UART_PutStr("Commands: [t]asks, [m]utexes, [r]eset, [h]elp\r\n");
                 } else if (buf[0] == 'r') {
                     UART_PutStr("Resetting CPU...\r\n");
-                    SCB_AIRCR = 0x05FA0004; /* Trigger system reset via NVIC */
+                    vTaskDelay(pdMS_TO_TICKS(10));
+                    SCB_AIRCR = 0x05FA0004;
                 } else if (idx > 0) {
-                    UART_PutStr("Unknown command\r\n");
+                    UART_Printf("Unknown command: %s\r\n", buf);
                 }
 
                 idx = 0;

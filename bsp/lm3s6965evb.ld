@@ -13,6 +13,9 @@ SECTIONS
         KEEP(*(.isr_vector))
         *(.text*)
         *(.rodata*)
+        *(.init)
+        *(.fini)
+        *(.ARM.exidx*)
         . = ALIGN(4);
         _etext = .;
     } > FLASH
@@ -44,4 +47,7 @@ SECTIONS
         . = ALIGN(8);
         _estack = .;
     } > SRAM
+
+    _end = .;
+    end = .;
 }

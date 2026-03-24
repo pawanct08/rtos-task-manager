@@ -62,9 +62,13 @@ typedef struct {
     uint32_t            wcet_ms;         /* Worst-case execution time     */
     uint32_t            exec_count;      /* Number of activations         */
     uint32_t            deadline_miss;   /* Deadline overrun counter      */
+    uint32_t            runtime_us;      /* Total time spent running      */
+    uint32_t            max_jitter_us;   /* Peak latency observed         */
+    uint32_t            stack_watermark; /* Stack high-watermark (words)  */
     TaskStateMachine_t  state;
     AutosarCategory_t   autosar_cat;
     bool                active;
+    uint32_t            last_sw_in;      /* Timestamp of context switch   */
 } TaskInfo_t;
 
 /* ─── Public API ─── */

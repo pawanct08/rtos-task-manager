@@ -9,6 +9,18 @@
 #include "task.h"
 #include <string.h>
 
+/* ─── ARM Cortex-M DWT & Core Debug Registers ─── */
+#define DWT_CTRL       (*((volatile uint32_t *)0xE0001000))
+#define DWT_CYCCNT     (*((volatile uint32_t *)0xE0001004))
+#define DEMCR           (*((volatile uint32_t *)0xE000EDFC))
+#define LAR             (*((volatile uint32_t *)0xE0001FB0)) /* Lock Access Register */
+
+#define TRCENA          (1 << 24)
+#define CYCCNTENA       (1 << 0)
+
+/* ─── External FreeRTOS internal handle (from tasks.c) ─── */
+extern void * volatile pxCurrentTCB;
+
 /* ─── Internal table ─── */
 static TaskInfo_t s_table[MAX_MANAGED_TASKS];
 static int        s_count = 0;
@@ -58,6 +70,49 @@ void TaskManager_Init(void)
     s_count = 0;
     s_lock  = xSemaphoreCreateMutex();
     configASSERT(s_lock != NULL);
+    TaskManager_InitDWT();
+}
+
+void TaskManager_InitDWT(void)
+{
+    /* Enable DWT cycle counter */
+    DEMCR |= TRCENA;
+    LAR = 0xC5ACCE55; /* Unlock DWT on some cores */
+    DWT_CYCCNT = 0;
+    DWT_CTRL |= CYCCNTENA;
+}
+
+uint32_t TaskManager_GetCycles(void)
+{
+    return DWT_CYCCNT;
+}
+
+void TaskManager_SwInHook(void)
+{
+    uint32_t now = DWT_CYCCNT;
+    TaskHandle_t current = (TaskHandle_t)pxCurrentTCB;
+
+    /* Find current task in our table (lockless for performance in trace) */
+    for (int i = 0; i < s_count; i++) {
+        if (s_table[i].handle == current) {
+            s_table[i].last_sw_in = now;
+            break;
+        }
+    }
+}
+
+void TaskManager_SwOutHook(void)
+{
+    uint32_t now = DWT_CYCCNT;
+    TaskHandle_t current = (TaskHandle_t)pxCurrentTCB;
+
+    for (int i = 0; i < s_count; i++) {
+        if (s_table[i].handle == current) {
+            uint32_t delta = now - s_table[i].last_sw_in;
+            s_table[i].runtime_us += (delta / (configCPU_CLOCK_HZ / 1000000));
+            break;
+        }
+    }
 }
 
 int TaskManager_Register(TaskHandle_t      handle,
@@ -96,6 +151,9 @@ void TaskManager_Refresh(void)
         if (!t->active) continue;
         eTaskState fs = eTaskGetState(t->handle);
         t->state = map_state(fs);
+        
+        /* Update stack watermark during refresh */
+        t->stack_watermark = uxTaskGetStackHighWaterMark(t->handle);
     }
     xSemaphoreGive(s_lock);
 }
@@ -106,16 +164,16 @@ void TaskManager_PrintStatus(void)
 
     UART_Printf("\r\n=== Task Manager Status (tick=%u) ===\r\n",
                 (unsigned)xTaskGetTickCount());
-    UART_Printf("+----------------+----------+--+------+-----+-----+------+-------------+\r\n");
-    UART_Printf("| %-14s | %-9s|Pr| Exec |Per..|Wdl..|Miss | AUTOSAR     |\r\n",
+    UART_Printf("+----------------+----------+--+------+-----+-----+-----+-------+-----------+-------------+\r\n");
+    UART_Printf("| %-14s | %-9s|Pr| Exec |Per..|Wdl..|Miss |StkFree|RunTime(us)| AUTOSAR     |\r\n",
                 "Name", "State");
-    UART_Printf("+----------------+----------+--+------+-----+-----+------+-------------+\r\n");
+    UART_Printf("+----------------+----------+--+------+-----+-----+-----+-------+-----------+-------------+\r\n");
 
     xSemaphoreTake(s_lock, portMAX_DELAY);
     for (int i = 0; i < s_count; i++) {
         TaskInfo_t *t = &s_table[i];
         if (!t->active) continue;
-        UART_Printf("| %-14s | %s|%2u| %5u|%4u |%4u |%5u | %s|\r\n",
+        UART_Printf("| %-14s | %s|%2u| %5u|%4u |%4u |%5u | %5u | %9u | %s|\r\n",
                     t->name,
                     state_name(t->state),
                     (unsigned)t->priority,
@@ -123,10 +181,12 @@ void TaskManager_PrintStatus(void)
                     (unsigned)t->period_ms,
                     (unsigned)t->deadline_ms,
                     (unsigned)t->deadline_miss,
+                    (unsigned)t->stack_watermark,
+                    (unsigned)t->runtime_us,
                     autosar_name(t->autosar_cat));
     }
     xSemaphoreGive(s_lock);
-    UART_Printf("+----------------+----------+--+------+-----+-----+------+-------------+\r\n\r\n");
+    UART_Printf("+----------------+----------+--+------+-----+-----+-----+-------+-----------+-------------+\r\n\r\n");
 }
 
 const TaskInfo_t *TaskManager_GetTable(int *count_out)
@@ -137,6 +197,7 @@ const TaskInfo_t *TaskManager_GetTable(int *count_out)
 
 void TaskManager_IncExec(TaskHandle_t handle)
 {
+    if (handle == NULL) handle = (TaskHandle_t)pxCurrentTCB;
     xSemaphoreTake(s_lock, portMAX_DELAY);
     for (int i = 0; i < s_count; i++) {
         if (s_table[i].handle == handle) {
