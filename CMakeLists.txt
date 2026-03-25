@@ -22,7 +22,7 @@ set(CMAKE_EXE_LINKER_FLAGS
      -Wl,--gc-sections -Wl,-Map=${PROJECT_NAME}.map --specs=nosys.specs --specs=nano.specs")
 
 # ── FreeRTOS paths (cloned by scripts/setup.sh) ──────────────────────────────
-set(FREERTOS_DIR ${CMAKE_SOURCE_DIR}/FreeRTOS-Kernel)
+set(FREERTOS_DIR ${CMAKE_SOURCE_DIR}/FreeRTOS/FreeRTOS/Source)
 
 set(FREERTOS_SOURCES
     ${FREERTOS_DIR}/tasks.c
@@ -42,6 +42,8 @@ set(APP_SOURCES
     src/uart_cli.c
     src/autosar_os.c
     src/latency_profiler.c
+    src/deadlock_demo.c
+    src/mem_pool_stress.c
     src/main.c
     bsp/startup.c
 )
@@ -51,6 +53,7 @@ include_directories(
     include/
     ${FREERTOS_DIR}/include
     ${FREERTOS_DIR}/portable/GCC/ARM_CM4F
+    ${CMAKE_SOURCE_DIR}/FreeRTOS/FreeRTOS/Source/include
 )
 
 # ── Build Target ──────────────────────────────────────────────────────────────

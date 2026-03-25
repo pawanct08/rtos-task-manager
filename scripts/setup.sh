@@ -5,7 +5,7 @@ set -e
 # Run once after cloning: chmod +x scripts/setup.sh && ./scripts/setup.sh
 
 FREERTOS_VERSION="V10.5.1"
-FREERTOS_DIR="FreeRTOS-Kernel"
+FREERTOS_DIR="FreeRTOS"
 
 echo "========================================"
 echo "  RTOS Task Manager — Setup"
@@ -38,16 +38,16 @@ if ! command -v git &>/dev/null; then
 fi
 
 if [ ! -d "$FREERTOS_DIR" ]; then
-    echo "==> Cloning FreeRTOS-Kernel $FREERTOS_VERSION..."
+    echo "==> Cloning FreeRTOS $FREERTOS_VERSION..."
     git clone -b $FREERTOS_VERSION --depth 1 \
-        https://github.com/FreeRTOS/FreeRTOS-Kernel.git $FREERTOS_DIR
+        https://github.com/FreeRTOS/FreeRTOS.git $FREERTOS_DIR
 else
     echo "==> FreeRTOS already present in ./$FREERTOS_DIR — skipping."
 fi
 
-if [ ! -d "$FREERTOS_DIR/portable/GCC/ARM_CM4F" ]; then
+if [ ! -d "$FREERTOS_DIR/FreeRTOS/Source/portable/GCC/ARM_CM4F" ]; then
     echo "Error: FreeRTOS ARM CM4F portable directory not found!"
-    echo "       Try: rm -rf FreeRTOS-Kernel && ./scripts/setup.sh"
+    echo "       Try: rm -rf FreeRTOS && ./scripts/setup.sh"
     exit 1
 fi
 

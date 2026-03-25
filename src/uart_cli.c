@@ -4,6 +4,8 @@
 #include "mem_pool.h"
 #include "autosar_os.h"
 #include "latency_profiler.h"
+#include "deadlock_demo.h"
+#include "mem_pool_stress.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include <stdarg.h>
@@ -65,47 +67,23 @@ static void cli_print_help(void) {
     UART_PutStr("  tasks    — task state table (priority, state, deadline, stack)\r\n");
     UART_PutStr("  mutexes  — mutex ownership + deadlock detection status\r\n");
     UART_PutStr("  pools    — memory pool utilisation\r\n");
-    UART_PutStr("  autosar  — AUTOSAR OS category mapping\r\n");
+    UART_PutStr("  autosar  — AUTOSAR OS category mapping + RMS check\r\n");
     UART_PutStr("  latency  — context switch latency stats + CSV dump\r\n");
+    UART_PutStr("  deadlock — trigger AB-BA deadlock demo (MutexGuard prevents it)\r\n");
     UART_PutStr("  reset    — software reset\r\n");
     UART_PutStr("  help     — show this message\r\n");
 }
 
-/* ── AUTOSAR category table ── */
-static void cli_print_autosar(void) {
-    int count = 0;
-    const TaskInfo_t *tbl = TaskManager_GetTable(&count);
-
-    UART_PutStr("\r\n=== AUTOSAR OS Mapping ===\r\n");
-    UART_PutStr("+----------------+----------------+--------+---------+---------+\r\n");
-    UART_PutStr("| Name           | Category       | Period | Deadline| WCET    |\r\n");
-    UART_PutStr("+----------------+----------------+--------+---------+---------+\r\n");
-
-    const char *cat_names[] = {
-        "BasicTask      ", "ExtendedTask   ", "ISR Category 1 ", "ISR Category 2 "
-    };
-
-    for (int i = 0; i < count; i++) {
-        const TaskInfo_t *t = &tbl[i];
-        if (!t->active) continue;
-        const char *cat = (t->autosar_cat <= 3) ? cat_names[t->autosar_cat] : "Unknown        ";
-        UART_Printf("| %-14s | %s | %5ums | %6ums | %5ums |\r\n",
-                    t->name, cat,
-                    (unsigned)t->period_ms,
-                    (unsigned)t->deadline_ms,
-                    (unsigned)t->wcet_ms);
-    }
-    UART_PutStr("+----------------+----------------+--------+---------+---------+\r\n\r\n");
-}
-
 /* ── dispatch ── */
 static void cli_dispatch(const char *cmd) {
-    if      (strcmp(cmd, "tasks")   == 0) { TaskManager_PrintStatus(); }
-    else if (strcmp(cmd, "mutexes") == 0) { MutexGuard_PrintStatus(); }
-    else if (strcmp(cmd, "pools")   == 0) { MemPool_DumpAll(); }
-    else if (strcmp(cmd, "autosar") == 0) { cli_print_autosar(); }
-    else if (strcmp(cmd, "latency") == 0) { lp_print_stats(); lp_dump_csv(); }
-    else if (strcmp(cmd, "reset")   == 0) {
+    if      (strcmp(cmd, "tasks")    == 0) { TaskManager_PrintStatus(); }
+    else if (strcmp(cmd, "mutexes")  == 0) { MutexGuard_PrintStatus(); }
+    else if (strcmp(cmd, "pools")    == 0) { MemPool_DumpAll(); }
+    else if (strcmp(cmd, "autosar")  == 0) { AutosarOS_PrintMapping(); }
+    else if (strcmp(cmd, "latency")  == 0) { lp_print_stats(); lp_dump_csv(); }
+    else if (strcmp(cmd, "deadlock") == 0) { DeadlockDemo_Start(); }
+    else if (strcmp(cmd, "help")     == 0) { cli_print_help(); }
+    else if (strcmp(cmd, "reset")    == 0) {
         UART_PutStr("Resetting...\r\n");
         vTaskDelay(pdMS_TO_TICKS(20));
         SCB_AIRCR = 0x05FA0004;
