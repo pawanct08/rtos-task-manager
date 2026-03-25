@@ -18,9 +18,6 @@
 #define TRCENA          (1 << 24)
 #define CYCCNTENA       (1 << 0)
 
-/* ─── External FreeRTOS internal handle (from tasks.c) ─── */
-extern void * volatile pxCurrentTCB;
-
 /* ─── Internal table ─── */
 static TaskInfo_t s_table[MAX_MANAGED_TASKS];
 static int        s_count = 0;
@@ -90,7 +87,7 @@ uint32_t TaskManager_GetCycles(void)
 void TaskManager_SwInHook(void)
 {
     uint32_t now = DWT_CYCCNT;
-    TaskHandle_t current = (TaskHandle_t)pxCurrentTCB;
+    TaskHandle_t current = xTaskGetCurrentTaskHandle();
 
     /* Find current task in our table (lockless for performance in trace) */
     for (int i = 0; i < s_count; i++) {
@@ -104,7 +101,7 @@ void TaskManager_SwInHook(void)
 void TaskManager_SwOutHook(void)
 {
     uint32_t now = DWT_CYCCNT;
-    TaskHandle_t current = (TaskHandle_t)pxCurrentTCB;
+    TaskHandle_t current = xTaskGetCurrentTaskHandle();
 
     for (int i = 0; i < s_count; i++) {
         if (s_table[i].handle == current) {
@@ -197,7 +194,7 @@ const TaskInfo_t *TaskManager_GetTable(int *count_out)
 
 void TaskManager_IncExec(TaskHandle_t handle)
 {
-    if (handle == NULL) handle = (TaskHandle_t)pxCurrentTCB;
+    if (handle == NULL) handle = xTaskGetCurrentTaskHandle();
     xSemaphoreTake(s_lock, portMAX_DELAY);
     for (int i = 0; i < s_count; i++) {
         if (s_table[i].handle == handle) {

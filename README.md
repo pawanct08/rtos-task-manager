@@ -1,4 +1,4 @@
-# 🧠 RTOS Task Manager
+# RTOS Task Manager
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-ARM%20Cortex--M4-blue)](https://www.arm.com/products/silicon-ip-cpu/cortex-m/cortex-m4)
@@ -6,164 +6,168 @@
 [![Standard](https://img.shields.io/badge/Standard-AUTOSAR%20OS-orange)](https://www.autosar.org/)
 [![Build](https://github.com/pawanct08/rtos-task-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/pawanct08/rtos-task-manager/actions/workflows/ci.yml)
 
-A production-grade **priority-based preemptive task manager** built on FreeRTOS for ARM Cortex-M4, featuring AUTOSAR OS abstraction, deadlock detection, fixed-size memory pool allocation, and an interactive UART CLI — all runnable on **QEMU** without real hardware.
+A production-grade **priority-based preemptive task manager** built on FreeRTOS for ARM Cortex-M4, featuring AUTOSAR OS abstraction, deadlock detection, fixed-size memory pool allocation, context switch latency profiling, and an interactive UART CLI — all runnable on **QEMU without real hardware**.
 
 ---
 
-## ✨ Features
+## Features
 
 | Module | Description |
 |---|---|
-| **Task Manager** | Priority-based scheduling (Rate Monotonic), deadline miss tracking, task state machine |
-| **Mutex Guard** | Deadlock detection via wait-for graph (DFS cycle detection) |
-| **Memory Pool** | O(1) fixed-block allocator with zero heap fragmentation |
-| **AUTOSAR OS Layer** | Maps FreeRTOS primitives to AUTOSAR Basic/Extended tasks, ISR Cat1/Cat2, Alarms |
-| **UART CLI** | Runtime inspection over serial: `tasks`, `mutexes`, `pools`, `autosar`, `reset` |
+| Task Manager | Priority-based scheduling (Rate Monotonic), deadline tracking, task state machine, DWT runtime stats |
+| Mutex Guard | Deadlock detection via wait-for graph (DFS cycle detection) |
+| Memory Pool | O(1) fixed-block allocator, zero heap fragmentation, ISR-safe |
+| AUTOSAR OS Layer | Maps FreeRTOS primitives to AUTOSAR Basic/Extended tasks, ISR Cat1/Cat2, Alarms |
+| Latency Profiler | DWT CYCCNT-based context switch jitter measurement, histogram + CSV dump |
+| UART CLI | Runtime inspection: `tasks`, `mutexes`, `pools`, `autosar`, `latency`, `reset` |
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Application Layer                  │
-│          main.c  ·  CLI_Task  ·  User Tasks          │
-├──────────────┬──────────────┬───────────────────────┤
-│ task_manager │ mutex_guard  │      autosar_os        │
-│──────────────│──────────────│───────────────────────│
-│  mem_pool    │  uart_cli    │   FreeRTOS Kernel      │
-├──────────────┴──────────────┴───────────────────────┤
-│              ARM Cortex-M4 / QEMU LM3S6965EVB        │
-└─────────────────────────────────────────────────────┘
++-----------------------------------------------------+
+|                   Application Layer                  |
+|          main.c  .  CLI_Task  .  Probe_Task          |
++---------------+---------------+---------------------+
+| task_manager  |  mutex_guard  |    autosar_os        |
++---------------+---------------+---------------------+
+|   mem_pool    | latency_profil|   FreeRTOS Kernel    |
++---------------+---------------+---------------------+
+|         ARM Cortex-M4 / QEMU mps2-an386              |
++-----------------------------------------------------+
 ```
 
 ### Task State Machine
 ```
-  READY ──► RUNNING ──► BLOCKED ──► READY
-                    └──► SUSPENDED
-                    └──► DELETED
+  READY --> RUNNING --> BLOCKED --> READY
+                    \-> SUSPENDED
+                    \-> DELETED
 ```
 
 ### Rate Monotonic Scheduling
+
 Tasks are assigned priorities inversely proportional to their periods:
 
 | Task | Period | Priority |
-|------|--------|----------|
-| High | 20 ms  | `configMAX_PRIORITIES - 1` |
-| Med  | 50 ms  | `configMAX_PRIORITIES - 2` |
-| Low  | 100 ms | `configMAX_PRIORITIES - 3` |
+|---|---|---|
+| HighTx | 20 ms | `configMAX_PRIORITIES - 1` |
+| MedCalc | 50 ms | `configMAX_PRIORITIES - 2` |
+| LowPoll | 100 ms | `configMAX_PRIORITIES - 3` |
 
-RMS schedulability is validated at startup:  
-**U = Σ(Ci/Ti) ≤ n(2^(1/n) − 1)**
+RMS schedulability validated at startup: **U = sum(Ci/Ti) <= n(2^(1/n) - 1)**
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 rtos-task-manager/
-├── include/
-│   ├── task_manager.h    # Preemptive task manager API
-│   ├── mutex_guard.h     # Deadlock-detecting mutex wrapper
-│   ├── mem_pool.h        # O(1) fixed-block memory allocator
-│   ├── uart_cli.h        # UART CLI task
-│   └── autosar_os.h      # AUTOSAR OS abstraction layer
-├── src/
-│   ├── task_manager.c
-│   ├── mutex_guard.c
-│   ├── mem_pool.c
-│   ├── uart_cli.c        # (planned)
-│   └── autosar_os.c      # (planned)
-├── bsp/
-│   ├── startup.c         # ARM Cortex-M4 startup
-│   └── lm3s6965evb.ld    # Linker script for QEMU target
-├── FreeRTOS/             # Cloned by setup.sh
-├── scripts/
-│   ├── setup.sh          # Clone FreeRTOS & set up toolchain
-│   └── run_qemu.sh       # Launch QEMU emulation
-├── CMakeLists.txt
-├── .github/
-│   ├── workflows/ci.yml  # GitHub Actions CI
-│   └── ISSUE_TEMPLATE/   # Bug & feature request templates
-├── .gitignore
-├── LICENSE
-├── CONTRIBUTING.md
-└── README.md
++-- include/
+|   +-- task_manager.h       # Task registry, DWT hooks, AUTOSAR types
+|   +-- mutex_guard.h        # Wait-for graph deadlock detection API
+|   +-- mem_pool.h           # O(1) fixed-block allocator API
+|   +-- uart_cli.h           # UART driver + CLI task
+|   +-- autosar_os.h         # AUTOSAR OS abstraction (alarms, categories)
+|   +-- latency_profiler.h   # DWT latency histogram API
++-- src/
+|   +-- task_manager.c       # DWT init, SwIn/SwOut hooks, task table
+|   +-- mutex_guard.c        # DFS cycle detection on wait-for graph
+|   +-- mem_pool.c           # Intrusive free-list, ISR-safe alloc/free
+|   +-- uart_cli.c           # PL011 UART, full CLI command dispatch
+|   +-- autosar_os.c         # FreeRTOS timer -> AUTOSAR alarm mapping
+|   +-- latency_profiler.c   # Sample collection, histogram, CSV dump
+|   +-- main.c               # Task creation, probe task, scheduler start
++-- bsp/
+|   +-- startup.c            # ARM Cortex-M4 vector table + Reset_Handler
+|   +-- mps2_an386.ld        # Linker script for QEMU mps2-an386 target
++-- scripts/
+|   +-- setup.sh             # Install toolchain, clone FreeRTOS, pip deps
+|   +-- run_qemu.sh          # Launch mps2-an386 QEMU (Ctrl+A X to quit)
+|   +-- debug_qemu.sh        # GDB server mode
+|   +-- plot_latency.py      # Parse UART log -> latency histogram PNG
++-- cmake/
+|   +-- arm-none-eabi.cmake  # CMake toolchain file
++-- .github/workflows/ci.yml # GitHub Actions: build on every push
++-- CMakeLists.txt
++-- FreeRTOS/                # Cloned by setup.sh (gitignored)
 ```
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- `arm-none-eabi-gcc` (ARM cross-compiler)
-- `cmake` ≥ 3.20
+- `arm-none-eabi-gcc`
+- `cmake` >= 3.20
 - `qemu-system-arm`
-- `git`
+- `python3`, `matplotlib`, `numpy` (for latency plot)
 
-On Ubuntu/Debian:
-```bash
-sudo apt install gcc-arm-none-eabi cmake qemu-system-arm git
-```
-
-### Build
+### Build and Run
 
 ```bash
-# 1. Clone the repo
+# 1. Clone
 git clone https://github.com/pawanct08/rtos-task-manager.git
 cd rtos-task-manager
 
-# 2. Set up FreeRTOS dependency
-bash scripts/setup.sh
+# 2. One-time setup (installs toolchain, clones FreeRTOS)
+chmod +x scripts/*.sh
+./scripts/setup.sh
 
-# 3. Configure & build
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi.cmake
+# 3. Build
+cmake -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi.cmake
 cmake --build build
 
-# 4. Run on QEMU
-bash scripts/run_qemu.sh
+# 4. Run on QEMU (Ctrl+A then X to quit)
+./scripts/run_qemu.sh
 ```
 
-### UART CLI (once running in QEMU)
+### UART CLI
 
-Connect to the emulated UART (e.g. via `telnet localhost 4321`):
+Once QEMU is running, type commands directly in your terminal:
 
 ```
-> tasks      # Print task status table with states, periods, deadline misses
-> mutexes    # Show mutex ownership & deadlock detection status
-> pools      # Memory pool utilisation statistics
+> tasks      # Task state table: priority, state, deadline misses, stack watermark
+> mutexes    # Mutex ownership and deadlock detection result
+> pools      # Memory pool: free/used blocks, alloc count, OOM count
 > autosar    # AUTOSAR OS category mapping table
-> help       # List all commands
-> reset      # Software reset
+> latency    # Context switch latency: min/max/mean/p99 + CSV dump
+> reset      # Software reset via SCB AIRCR
+> help       # Show all commands
+```
+
+### Latency Plot
+
+```bash
+# Capture UART output while running QEMU
+./scripts/run_qemu.sh | tee uart.log
+# Type 'latency' in the QEMU terminal, then Ctrl+A X
+
+# Generate histogram
+python3 scripts/plot_latency.py uart.log
+# Saves: latency_histogram.png
 ```
 
 ---
 
-## 🔬 Module Deep-Dives
+## Module Details
 
-### Task Manager (`task_manager.h`)
+### Latency Profiler
 
-- Maintains up to **8 managed tasks** alongside FreeRTOS TCBs
-- Tracks: priority, period, deadline, WCET, exec count, deadline misses
-- `TaskManager_Refresh()` drives the state machine — call from a monitor task
-- `TaskManager_PrintStatus()` dumps a formatted table over UART
+The `Probe_Task` records `DWT->CYCCNT` before each `vTaskDelayUntil()` and measures the delta on wakeup. The difference between actual and expected wake time is the scheduling jitter. Samples are bucketed into a 7-bin histogram and can be dumped as CSV for offline plotting.
 
-### Mutex Guard (`mutex_guard.h`)
+Histogram bins (microseconds): `0-5 | 5-10 | 10-20 | 20-50 | 50-100 | 100-200 | 200+`
 
-- Wraps FreeRTOS semaphores with **wait-for graph** tracking
-- On every `MutexGuard_Take()`, a DFS cycle check runs
-- Deadlock detected → logs offending tasks, optionally triggers recovery
-- Up to **8 tracked mutexes** across **8 tasks**
+### Mutex Guard
 
-### Memory Pool (`mem_pool.h`)
+Maintains a wait-for graph: when task A tries to take mutex M held by task B which is waiting on mutex N held by task A, the DFS cycle check fires before blocking — preventing the deadlock rather than detecting it after the fact.
 
-- Intrusive free-list — zero extra metadata storage
-- **O(1)** alloc & free, ISR-safe via FreeRTOS critical sections
-- `MEM_POOL_SIZE(block_sz, num_blocks)` macro for compile-time sizing
-- CLI-accessible stats: total blocks, free, allocated, OOM count
+### Memory Pool
 
-### AUTOSAR OS Layer (`autosar_os.h`)
+Intrusive free-list — the `next` pointer lives inside the free block itself, so zero extra metadata is needed. `MemPool_Alloc()` and `MemPool_Free()` are both O(1) and ISR-safe via `taskENTER_CRITICAL_FROM_ISR`.
+
+### AUTOSAR OS Layer
 
 | AUTOSAR Concept | FreeRTOS Mapping |
 |---|---|
@@ -171,18 +175,10 @@ Connect to the emulated UART (e.g. via `telnet localhost 4321`):
 | Extended Task | FreeRTOS task + EventGroup |
 | ISR Category 1 | Direct vector handler |
 | ISR Category 2 | FromISR API handler |
-| Resource | Binary Semaphore / Mutex |
-| Alarm | Software Timer |
-| Counter | Tick count / hardware timer |
+| Alarm | Software Timer (`xTimerCreate`) |
 
 ---
 
-## 🤝 Contributing
+## License
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute bug fixes, new features, or documentation improvements.
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).

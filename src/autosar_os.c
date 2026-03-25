@@ -1,6 +1,7 @@
 #include "autosar_os.h"
 #include "uart_cli.h"
 #include <stdbool.h>
+#include <string.h>
 
 static AutosarAlarm_t alarms[MAX_ALARMS];
 static int alarm_count = 0;
@@ -22,7 +23,8 @@ StatusType AutosarOS_SetRelAlarm(const char *name, uint32_t period_ms, AlarmCall
     if (alarm_count >= MAX_ALARMS) return E_OS_LIMIT;
 
     AutosarAlarm_t *a = &alarms[alarm_count++];
-    // name copy elided...
+    strncpy(a->name, name, sizeof(a->name) - 1);
+    a->name[sizeof(a->name) - 1] = '\0';
     a->period_ms = period_ms;
     a->callback = cb;
     a->active = true;
@@ -36,9 +38,8 @@ StatusType AutosarOS_SetRelAlarm(const char *name, uint32_t period_ms, AlarmCall
 }
 
 StatusType AutosarOS_CancelAlarm(const char *name) {
-    // Simplified search and stop
     for (int i = 0; i < alarm_count; i++) {
-        if (alarms[i].active) { // Name check missing for brevity
+        if (alarms[i].active && strncmp(alarms[i].name, name, sizeof(alarms[i].name)) == 0) {
             xTimerStop(alarms[i].timer, 0);
             alarms[i].active = false;
             return E_OK;
