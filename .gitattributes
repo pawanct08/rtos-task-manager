@@ -1,0 +1,7 @@
+# Ensure shell scripts always use LF in the repo (never CRLF)
+*.sh        text eol=lf
+*.py        text eol=lf
+*.ld        text eol=lf
+*.c         text eol=lf
+*.h         text eol=lf
+CMakeLists.txt text eol=lf
