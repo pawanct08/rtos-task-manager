@@ -51,6 +51,9 @@ SECTIONS
         _ebss = .;
     } > SRAM
 
+    /* _sbrk heap start — required by newlib nosys */
+    end = _ebss;
+
     /*--- FreeRTOS heap (heap_4) + stack headroom ---*/
     .heap :
     {

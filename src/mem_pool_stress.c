@@ -36,7 +36,6 @@ static volatile uint32_t s_verify_count     = 0;
 static void producer_task(void *pv)
 {
     uint8_t pattern = (uint8_t)(uint32_t)pv;   /* A, B, or C */
-    char name[8];
     vTaskDelay(pdMS_TO_TICKS(10 * (pattern & 0x0F)));  /* stagger start */
 
     for (;;) {

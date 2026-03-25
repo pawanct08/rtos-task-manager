@@ -17,9 +17,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/* ─── UART0 on LM3S6965EVB (QEMU) ─── */
-#define UART0_BASE   0x4000C000UL
-
 /* ─── Public API ─── */
 
 /**
