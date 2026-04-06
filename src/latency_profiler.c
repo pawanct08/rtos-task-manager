@@ -2,7 +2,7 @@
 // Copyright (c) 2026 pawanct08
 
 /*=============================================================================
- * latency_profiler.c — Week 2
+ * latency_profiler.c
  * Context switch latency measurement via DWT cycle counter.
  *=============================================================================*/
 

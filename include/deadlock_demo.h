@@ -5,7 +5,7 @@
 #define DEADLOCK_DEMO_H
 
 /*=============================================================================
- * deadlock_demo.h — Week 3
+ * deadlock_demo.h
  *
  * A controlled, repeatable deadlock scenario using MutexGuard.
  *

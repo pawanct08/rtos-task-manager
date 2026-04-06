@@ -5,7 +5,7 @@
 #define MEM_POOL_STRESS_H
 
 /*=============================================================================
- * mem_pool_stress.h — Week 3
+ * mem_pool_stress.h
  *
  * Stress tests the memory pool under concurrent task access:
  *

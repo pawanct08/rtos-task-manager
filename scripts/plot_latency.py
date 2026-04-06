@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-scripts/plot_latency.py — Week 2
+scripts/plot_latency.py
 Parses UART output from the RTOS task manager and plots a context switch
 latency histogram.
 

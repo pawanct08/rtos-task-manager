@@ -2,7 +2,7 @@
 // Copyright (c) 2026 pawanct08
 
 /*=============================================================================
- * mem_pool_stress.c — Week 3
+ * mem_pool_stress.c
  *
  * Concurrent memory pool stress test.
  * Verifies correctness, OOM handling, and no data corruption under load.

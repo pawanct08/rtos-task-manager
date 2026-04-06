@@ -5,7 +5,7 @@
 #define LATENCY_PROFILER_H
 
 /*=============================================================================
- * latency_profiler.h — Week 2
+ * latency_profiler.h
  *
  * Measures context switch latency using the DWT cycle counter.
  *
