@@ -19,7 +19,7 @@ A production-grade **priority-based preemptive task manager** built on FreeRTOS 
 | Memory Pool | O(1) fixed-block allocator, zero heap fragmentation, ISR-safe |
 | AUTOSAR OS Layer | Maps FreeRTOS primitives to AUTOSAR Basic/Extended tasks, ISR Cat1/Cat2, Alarms |
 | Latency Profiler | DWT CYCCNT-based context switch jitter measurement, histogram + CSV dump |
-| UART CLI | Runtime inspection: `tasks`, `mutexes`, `pools`, `autosar`, `latency`, `reset` |
+| UART CLI | Runtime inspection: `tasks`, `mutexes`, `pools`, `autosar`, `latency`, `deadlock`, `reset` |
 
 ---
 
@@ -94,7 +94,7 @@ rtos-task-manager/
 |   +-- arm-none-eabi.cmake  # CMake toolchain file
 +-- .github/workflows/ci.yml # GitHub Actions: build on every push
 +-- CMakeLists.txt
-+-- FreeRTOS/                # Cloned by setup.sh (gitignored)
++-- FreeRTOS-Kernel/         # Cloned by setup.sh (gitignored)
 ```
 
 ---
