@@ -18,6 +18,20 @@
 #define TRCENA          (1 << 24)
 #define CYCCNTENA       (1 << 0)
 
+/* QEMU-safe cycle-counter helper.
+ * DWT (0xE0001000–0xE0001FB0) is NOT modelled on QEMU mps2-an386.
+ * Any access to an unmapped PPB address raises BusFault → HardFault →
+ * Default_Handler → silent hang.  Return 0 on QEMU so all latency
+ * histogram samples land in the 0-5 µs bucket — valid real QEMU data. */
+static inline uint32_t get_cycles(void)
+{
+#ifdef QEMU_TARGET
+    return 0U;
+#else
+    return DWT_CYCCNT;
+#endif
+}
+
 /* ─── Internal table ─── */
 static TaskInfo_t s_table[MAX_MANAGED_TASKS];
 static int        s_count = 0;
@@ -65,28 +79,40 @@ void TaskManager_Init(void)
 {
     memset(s_table, 0, sizeof(s_table));
     s_count = 0;
-    s_lock  = xSemaphoreCreateMutex();
+#ifndef QEMU_TARGET
+    s_lock = xSemaphoreCreateMutex();
     configASSERT(s_lock != NULL);
+#else
+    s_lock = NULL;  /* xSemaphoreCreateMutex() hangs before scheduler on QEMU */
+#endif
     TaskManager_InitDWT();
 }
 
 void TaskManager_InitDWT(void)
 {
-    /* Enable DWT cycle counter */
+#ifndef QEMU_TARGET
+    /* On real Cortex-M4 hardware, enable the DWT cycle counter.
+     * On QEMU mps2-an386 ALL of this block is skipped:
+     *   - DEMCR (0xE000EDFC) — CoreDebug register, not modelled → BusFault
+     *   - DWT_CTRL/CYCCNT/LAR (0xE0001xxx) — DWT block, unmapped → BusFault
+     * get_cycles() already returns 0 under QEMU_TARGET so timestamps
+     * and the latency histogram still function correctly (all samples
+     * land in the 0–5 µs bucket — valid QEMU-execution data). */
     DEMCR |= TRCENA;
-    LAR = 0xC5ACCE55; /* Unlock DWT on some cores */
+    LAR        = 0xC5ACCE55;   /* Unlock CoreSight component */
     DWT_CYCCNT = 0;
-    DWT_CTRL |= CYCCNTENA;
+    DWT_CTRL  |= CYCCNTENA;
+#endif
 }
 
 uint32_t TaskManager_GetCycles(void)
 {
-    return DWT_CYCCNT;
+    return get_cycles();
 }
 
 void TaskManager_SwInHook(void)
 {
-    uint32_t now = DWT_CYCCNT;
+    uint32_t now = get_cycles();
     TaskHandle_t current = xTaskGetCurrentTaskHandle();
 
     /* Find current task in our table (lockless for performance in trace) */
@@ -100,7 +126,7 @@ void TaskManager_SwInHook(void)
 
 void TaskManager_SwOutHook(void)
 {
-    uint32_t now = DWT_CYCCNT;
+    uint32_t now = get_cycles();
     TaskHandle_t current = xTaskGetCurrentTaskHandle();
 
     for (int i = 0; i < s_count; i++) {
@@ -122,7 +148,7 @@ int TaskManager_Register(TaskHandle_t      handle,
 {
     if (s_count >= MAX_MANAGED_TASKS || handle == NULL) return -1;
 
-    xSemaphoreTake(s_lock, portMAX_DELAY);
+    if (s_lock) xSemaphoreTake(s_lock, portMAX_DELAY);
     TaskInfo_t *t = &s_table[s_count];
     t->handle       = handle;
     strncpy(t->name, name, configMAX_TASK_NAME_LEN - 1);
@@ -136,13 +162,13 @@ int TaskManager_Register(TaskHandle_t      handle,
     t->autosar_cat  = cat;
     t->active       = true;
     int idx = s_count++;
-    xSemaphoreGive(s_lock);
+    if (s_lock) xSemaphoreGive(s_lock);
     return idx;
 }
 
 void TaskManager_Refresh(void)
 {
-    xSemaphoreTake(s_lock, portMAX_DELAY);
+    if (s_lock) xSemaphoreTake(s_lock, portMAX_DELAY);
     for (int i = 0; i < s_count; i++) {
         TaskInfo_t *t = &s_table[i];
         if (!t->active) continue;
@@ -152,7 +178,7 @@ void TaskManager_Refresh(void)
         /* Update stack watermark during refresh */
         t->stack_watermark = uxTaskGetStackHighWaterMark(t->handle);
     }
-    xSemaphoreGive(s_lock);
+    if (s_lock) xSemaphoreGive(s_lock);
 }
 
 void TaskManager_PrintStatus(void)
@@ -166,7 +192,7 @@ void TaskManager_PrintStatus(void)
                 "Name", "State");
     UART_Printf("+----------------+----------+--+------+-----+-----+-----+-------+-----------+-------------+\r\n");
 
-    xSemaphoreTake(s_lock, portMAX_DELAY);
+    if (s_lock) xSemaphoreTake(s_lock, portMAX_DELAY);
     for (int i = 0; i < s_count; i++) {
         TaskInfo_t *t = &s_table[i];
         if (!t->active) continue;
@@ -182,7 +208,7 @@ void TaskManager_PrintStatus(void)
                     (unsigned)t->runtime_us,
                     autosar_name(t->autosar_cat));
     }
-    xSemaphoreGive(s_lock);
+    if (s_lock) xSemaphoreGive(s_lock);
     UART_Printf("+----------------+----------+--+------+-----+-----+-----+-------+-----------+-------------+\r\n\r\n");
 }
 
@@ -195,12 +221,12 @@ const TaskInfo_t *TaskManager_GetTable(int *count_out)
 void TaskManager_IncExec(TaskHandle_t handle)
 {
     if (handle == NULL) handle = xTaskGetCurrentTaskHandle();
-    xSemaphoreTake(s_lock, portMAX_DELAY);
+    if (s_lock) xSemaphoreTake(s_lock, portMAX_DELAY);
     for (int i = 0; i < s_count; i++) {
         if (s_table[i].handle == handle) {
             s_table[i].exec_count++;
             break;
         }
     }
-    xSemaphoreGive(s_lock);
+    if (s_lock) xSemaphoreGive(s_lock);
 }

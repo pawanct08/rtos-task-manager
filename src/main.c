@@ -9,8 +9,8 @@
 #include "deadlock_demo.h"
 #include "mem_pool_stress.h"
 
-/* DWT CYCCNT register */
-#define DWT_CYCCNT  (*((volatile uint32_t *)0xE0001004))
+/* Use TaskManager_GetCycles() rather than accessing DWT_CYCCNT directly —
+ * the DWT is not modelled on QEMU mps2-an386 (unmapped PPB = BusFault). */
 
 /*---------------------------------------------------------------------------
  * AUTOSAR Alarm callbacks — called by software timer on period expiry
@@ -54,20 +54,29 @@ static void LowPoll_Task(void *pv) {
 }
 
 /*---------------------------------------------------------------------------
- * Probe task — Week 2: DWT scheduling jitter measurement
+ * Probe task — DWT scheduling jitter measurement
  *---------------------------------------------------------------------------*/
 static void Probe_Task(void *pv) {
     (void)pv;
     TickType_t xLastWake = xTaskGetTickCount();
 
     for (;;) {
-        uint32_t t0 = DWT_CYCCNT;
+        uint32_t t0 = TaskManager_GetCycles();
         vTaskDelayUntil(&xLastWake, pdMS_TO_TICKS(10));
-        uint32_t elapsed  = DWT_CYCCNT - t0;
+        uint32_t elapsed  = TaskManager_GetCycles() - t0;
         uint32_t expected = (LP_CPU_CLOCK_HZ / 1000) * 10;
         uint32_t jitter   = (elapsed > expected) ? (elapsed - expected) : 0;
         lp_record(jitter);
     }
+}
+
+/*---------------------------------------------------------------------------
+ * Verbose assert hook — prints file:line so silent for(;;) hangs are visible
+ *---------------------------------------------------------------------------*/
+void vAssertCalled( const char * pcFile, unsigned long ulLine )
+{
+    UART_Printf( "\r\n!!! configASSERT FAILED: %s : %d\r\n", pcFile, (int) ulLine );
+    for( ;; );
 }
 
 /*---------------------------------------------------------------------------
@@ -79,37 +88,58 @@ int main(void) {
     UART_Init();
     UART_PutStr("\r\n================================================\r\n");
     UART_PutStr("    RTOS Task Manager — FreeRTOS / Cortex-M4\r\n");
-    UART_PutStr("    QEMU mps2-an386  |  Weeks 1-4 complete\r\n");
+    UART_PutStr("    QEMU mps2-an386  |  Cortex-M4 RTOS\r\n");
     UART_PutStr("================================================\r\n\r\n");
 
     TaskManager_Init();   /* also initialises DWT */
+    UART_PutStr("CHK1: TaskManager OK\r\n");
     MutexGuard_Init();
+    UART_PutStr("CHK2: MutexGuard OK\r\n");
     AutosarOS_Init();
+    UART_PutStr("CHK3: AutosarOS OK\r\n");
     lp_init();
+    UART_PutStr("CHK4: lp_init OK\r\n");
+
+    /* Heap sanity probe — verify pvPortMalloc works before first xTaskCreate */
+    {
+        void *pProbe = pvPortMalloc( 4U );
+        if( pProbe != NULL ) { vPortFree( pProbe ); UART_PutStr( "CHK4h: heap OK\r\n" ); }
+        else                 { UART_PutStr( "CHK4h: heap FAIL -- aborting\r\n" ); for(;;); }
+    }
 
     /* ── 2. Core application tasks ────────────────────────────────────────── */
-    TaskHandle_t hHigh, hMed, hLow;
+    TaskHandle_t hHigh = NULL, hMed = NULL, hLow = NULL;
 
-    xTaskCreate(HighTx_Task,  "HighTx",  256, NULL, PRIORITY_HIGH, &hHigh);
+    UART_PutStr("CHK4a: calling xTaskCreate(HighTx)\r\n");
+    if (xTaskCreate(HighTx_Task,  "HighTx",  256, NULL, PRIORITY_HIGH, &hHigh) != pdPASS) {
+        UART_PutStr("!!! xTaskCreate HighTx FAILED (heap exhausted?)\r\n");
+    }
+    UART_PutStr("CHK4b: xTaskCreate returned\r\n");
     TaskManager_Register(hHigh, "HighTx", PRIORITY_HIGH,
                          20, 20, 5, AUTOSAR_BASIC_TASK);
+    UART_PutStr("CHK5: HighTx created\r\n");
 
     xTaskCreate(MedCalc_Task, "MedCalc", 256, NULL, PRIORITY_MED,  &hMed);
     TaskManager_Register(hMed, "MedCalc", PRIORITY_MED,
                          50, 50, 10, AUTOSAR_BASIC_TASK);
+    UART_PutStr("CHK6: MedCalc created\r\n");
 
     xTaskCreate(LowPoll_Task, "LowPoll", 256, NULL, PRIORITY_LOW,  &hLow);
     TaskManager_Register(hLow, "LowPoll", PRIORITY_LOW,
                          100, 100, 15, AUTOSAR_BASIC_TASK);
+    UART_PutStr("CHK7: LowPoll created\r\n");
 
-    /* ── 3. Week 2 — latency probe ────────────────────────────────────────── */
+    /* ── 3. Latency probe ────────────────────────────────────────────────── */
     xTaskCreate(Probe_Task, "Probe", 256, NULL, PRIORITY_HIGH, NULL);
+    UART_PutStr("CHK8: Probe created\r\n");
 
-    /* ── 4. Week 3 — deadlock demo + memory pool stress ──────────────────── */
+    /* ── 4. Deadlock demo + memory pool stress ────────────────────────── */
     DeadlockDemo_Start();
+    UART_PutStr("CHK9: DeadlockDemo started\r\n");
     MemPoolStress_Start();
+    UART_PutStr("CHK10: MemPoolStress started\r\n");
 
-    /* ── 5. Week 4 — AUTOSAR alarms ──────────────────────────────────────── */
+    /* ── 5. AUTOSAR alarms ──────────────────────────────────────────────── */
     AutosarOS_SetRelAlarm("HealthMon",   500,  alarm_health_monitor);
     AutosarOS_SetRelAlarm("Diagnostics", 1000, alarm_diagnostics);
 

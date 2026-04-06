@@ -12,35 +12,41 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Simplified mps2-an386 UART registers (PL011 at 0x40004000) */
-#define UART0_BASE 0x40004000UL
-#define UART_DR    *((volatile uint32_t *)(UART0_BASE + 0x00))
-#define UART_FR    *((volatile uint32_t *)(UART0_BASE + 0x18))
-#define UART_IBRD  *((volatile uint32_t *)(UART0_BASE + 0x24))
-#define UART_FBRD  *((volatile uint32_t *)(UART0_BASE + 0x28))
-#define UART_LCRH  *((volatile uint32_t *)(UART0_BASE + 0x2C))
-#define UART_CTL   *((volatile uint32_t *)(UART0_BASE + 0x30))
+/*
+ * CMSDK APB UART registers (mps2-an386 UART0 at 0x40004000)
+ *
+ * The mps2-an386 machine uses ARM CMSDK APB UARTs, NOT PL011.
+ * Register map:
+ *   0x00  DATA    – TX write / RX read
+ *   0x04  STATE   – bit0=TX full, bit1=RX full
+ *   0x08  CTRL    – bit0=TX enable, bit1=RX enable
+ *   0x10  BAUDDIV – baud-rate divisor (PCLK / baud)
+ */
+#define UART0_BASE   0x40004000UL
+#define UART_DATA    *((volatile uint32_t *)(UART0_BASE + 0x00))
+#define UART_STATE   *((volatile uint32_t *)(UART0_BASE + 0x04))
+#define UART_CTRL    *((volatile uint32_t *)(UART0_BASE + 0x08))
+#define UART_BAUDDIV *((volatile uint32_t *)(UART0_BASE + 0x10))
+
+#define STATE_TXFULL (1u << 0)   /* TX register full – wait before writing */
+#define STATE_RXFULL (1u << 1)   /* RX register full – data available       */
+#define CTRL_TXEN    (1u << 0)   /* Transmit enable                         */
+#define CTRL_RXEN    (1u << 1)   /* Receive enable                          */
 
 #define SCB_AIRCR  *((volatile uint32_t *)0xE000ED0C)
 
-#define FR_TXFF (1 << 5)
-#define FR_RXFE (1 << 4)
-
 void UART_Init(void) {
-    UART_CTL = 0;
-    /* 115200 baud @ 25 MHz (mps2-an386): IBRD=13, FBRD=36 */
-    UART_IBRD = 13;
-    UART_FBRD = 36;
-    /* 8-bit, no parity, 1-stop, FIFO enable */
-    UART_LCRH = 0x70;
-    /* Enable UART + TX + RX */
-    UART_CTL = 0x301;
+    /* PCLK = 25 MHz on mps2-an386; 25 000 000 / 115200 ≈ 217          */
+    /* QEMU does not simulate timing, but the divisor must be non-zero. */
+    UART_BAUDDIV = 217;
+    /* Enable TX and RX – this is the bit the old PL011 driver missed! */
+    UART_CTRL = CTRL_TXEN | CTRL_RXEN;
 }
 
 void UART_PutChar(char c) {
     if (c == '\n') UART_PutChar('\r');
-    while (UART_FR & FR_TXFF) {}
-    UART_DR = c;
+    while (UART_STATE & STATE_TXFULL) {}   /* wait if TX register full */
+    UART_DATA = c;
 }
 
 void UART_PutStr(const char *s) {
@@ -48,8 +54,8 @@ void UART_PutStr(const char *s) {
 }
 
 char UART_GetChar(void) {
-    if (UART_FR & FR_RXFE) return 0;
-    return (char)(UART_DR & 0xFF);
+    if (!(UART_STATE & STATE_RXFULL)) return 0;
+    return (char)(UART_DATA & 0xFF);
 }
 
 void UART_Printf(const char *fmt, ...) {

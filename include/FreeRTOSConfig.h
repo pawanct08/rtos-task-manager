@@ -113,7 +113,7 @@ demo. */
 #define configSTREAM_BUFFER_SENDER_TASK_STACK_SIZE 	( 180 )
 #define configSTREAM_BUFFER_SMALLER_TASK_STACK_SIZE	( 110 )
 
-/* Week 2: DWT Cycle Counter & Context Switch Profiling */
+/* DWT Cycle Counter & Context Switch Profiling */
 extern void TaskManager_SwInHook(void);
 extern void TaskManager_SwOutHook(void);
 extern uint32_t TaskManager_GetCycles(void);
@@ -126,7 +126,8 @@ extern void TaskManager_InitDWT(void);
 #define traceTASK_SWITCHED_OUT() TaskManager_SwOutHook()
 
 // void vAssertCalled( const char *pcFile, unsigned long ulLine );
-#define configASSERT( x ) if( ( x ) == 0 ) { for(;;); }
+extern void vAssertCalled( const char * pcFile, unsigned long ulLine );
+#define configASSERT( x )  if( ( x ) == 0 ) { vAssertCalled( __FILE__, __LINE__ ); }
 
 /* Include the FreeRTOS+Trace FreeRTOS trace macro definitions.  See the comments
 at the top of main.c for enabling the trace recorder.

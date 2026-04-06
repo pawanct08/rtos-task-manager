@@ -61,6 +61,9 @@ add_executable(${PROJECT_NAME}.elf
     ${FREERTOS_SOURCES}
 )
 
+# ── QEMU: DWT not modelled on mps2-an386 — skip cycle-counter hardware ───────
+target_compile_definitions(${PROJECT_NAME}.elf PRIVATE QEMU_TARGET)
+
 # ── Post-build: generate .bin and print size ──────────────────────────────────
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O binary ${PROJECT_NAME}.elf ${PROJECT_NAME}.bin

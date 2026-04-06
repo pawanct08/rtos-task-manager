@@ -59,8 +59,12 @@ void MutexGuard_Init(void)
     memset(s_wait,    0, sizeof(s_wait));
     s_mutex_count = 0;
     s_wait_count  = 0;
+#ifndef QEMU_TARGET
     s_guard = xSemaphoreCreateMutex();
     configASSERT(s_guard != NULL);
+#else
+    s_guard = NULL;  /* xSemaphoreCreateMutex() hangs before scheduler on QEMU */
+#endif
 }
 
 int MutexGuard_Create(const char *name)
@@ -69,8 +73,12 @@ int MutexGuard_Create(const char *name)
 
     int idx = s_mutex_count++;
     MutexInfo_t *m = &s_mutexes[idx];
-    m->sem    = xSemaphoreCreateMutex();
+#ifndef QEMU_TARGET
+    m->sem = xSemaphoreCreateMutex();
     configASSERT(m->sem != NULL);
+#else
+    m->sem = NULL;  /* pre-scheduler xSemaphoreCreateMutex hangs on QEMU */
+#endif
     strncpy(m->name, name, sizeof(m->name) - 1);
     m->owner      = NULL;
     m->lock_count = 0;
@@ -84,7 +92,7 @@ BaseType_t MutexGuard_Take(int idx, TickType_t timeout)
     MutexInfo_t *m = &s_mutexes[idx];
 
     /* Record wait edge BEFORE blocking */
-    xSemaphoreTake(s_guard, portMAX_DELAY);
+    if (s_guard) xSemaphoreTake(s_guard, portMAX_DELAY);
     TaskHandle_t self = xTaskGetCurrentTaskHandle();
 
     /* Add waiter edge */
@@ -107,18 +115,19 @@ BaseType_t MutexGuard_Take(int idx, TickType_t timeout)
     if (deadlock) {
         /* Remove the edge we just added (avoid poisoning the graph) */
         if (s_wait_count > 0) s_wait_count--;
-        xSemaphoreGive(s_guard);
+        if (s_guard) xSemaphoreGive(s_guard);
         UART_Printf("[DEADLOCK] Task '%s' would deadlock on mutex '%s'!\r\n",
                     pcTaskGetName(self), m->name);
         return pdFALSE;
     }
-    xSemaphoreGive(s_guard);
+    if (s_guard) xSemaphoreGive(s_guard);
 
     /* Now actually block on the semaphore */
+    if (m->sem == NULL) { return pdFALSE; }  /* QEMU: sem not created, skip */
     BaseType_t result = xSemaphoreTake(m->sem, timeout);
 
     /* Remove wait edge */
-    xSemaphoreTake(s_guard, portMAX_DELAY);
+    if (s_guard) xSemaphoreTake(s_guard, portMAX_DELAY);
     for (int i = 0; i < s_wait_count; i++) {
         if (s_wait[i].waiter == self && s_wait[i].mutex_idx == idx) {
             s_wait[i] = s_wait[--s_wait_count];
@@ -130,7 +139,7 @@ BaseType_t MutexGuard_Take(int idx, TickType_t timeout)
         m->owner = self;
         m->lock_count++;
     }
-    xSemaphoreGive(s_guard);
+    if (s_guard) xSemaphoreGive(s_guard);
     return result;
 }
 
@@ -139,16 +148,17 @@ void MutexGuard_Give(int idx)
     if (idx < 0 || idx >= s_mutex_count) return;
     MutexInfo_t *m = &s_mutexes[idx];
 
-    xSemaphoreTake(s_guard, portMAX_DELAY);
+    if (s_guard) xSemaphoreTake(s_guard, portMAX_DELAY);
     m->owner = NULL;
-    xSemaphoreGive(s_guard);
+    if (s_guard) xSemaphoreGive(s_guard);
 
+    if (m->sem == NULL) { return; }  /* QEMU: sem not created, skip */
     xSemaphoreGive(m->sem);
 }
 
 bool MutexGuard_DetectDeadlock(void)
 {
-    xSemaphoreTake(s_guard, portMAX_DELAY);
+    if (s_guard) xSemaphoreTake(s_guard, portMAX_DELAY);
     memset(s_visited,  0, sizeof(s_visited));
     memset(s_in_stack, 0, sizeof(s_in_stack));
     bool found = false;
@@ -157,13 +167,13 @@ bool MutexGuard_DetectDeadlock(void)
             if (dfs(i)) { found = true; break; }
         }
     }
-    xSemaphoreGive(s_guard);
+    if (s_guard) xSemaphoreGive(s_guard);
     return found;
 }
 
 void MutexGuard_PrintStatus(void)
 {
-    xSemaphoreTake(s_guard, portMAX_DELAY);
+    if (s_guard) xSemaphoreTake(s_guard, portMAX_DELAY);
     UART_Printf("\r\n=== Mutex Status ===\r\n");
     UART_Printf("+----------------+--------+--------------------+-------+\r\n");
     UART_Printf("| %-14s | %-6s | %-18s | Locks |\r\n", "Name", "State", "Owner");
@@ -184,7 +194,7 @@ void MutexGuard_PrintStatus(void)
         if (!s_visited[i]) dl = dfs(i);
     }
     UART_Printf("Deadlock detected: %s\r\n\r\n", dl ? "YES !!!" : "No");
-    xSemaphoreGive(s_guard);
+    if (s_guard) xSemaphoreGive(s_guard);
 }
 
 const MutexInfo_t *MutexGuard_GetTable(int *count_out)
