@@ -70,6 +70,8 @@ rtos-task-manager/
 |   +-- uart_cli.h           # UART driver + CLI task
 |   +-- autosar_os.h         # AUTOSAR OS abstraction (alarms, categories)
 |   +-- latency_profiler.h   # DWT latency histogram API
+|   +-- deadlock_demo.h      # DeadlockDemo_Start API
+|   +-- mem_pool_stress.h    # MemPoolStress_Start API
 +-- src/
 |   +-- task_manager.c       # DWT init, SwIn/SwOut hooks, task table
 |   +-- mutex_guard.c        # DFS cycle detection on wait-for graph
@@ -77,6 +79,8 @@ rtos-task-manager/
 |   +-- uart_cli.c           # PL011 UART, full CLI command dispatch
 |   +-- autosar_os.c         # FreeRTOS timer -> AUTOSAR alarm mapping
 |   +-- latency_profiler.c   # Sample collection, histogram, CSV dump
+|   +-- deadlock_demo.c      # AB-BA deadlock demo, MutexGuard prevention
+|   +-- mem_pool_stress.c    # Concurrent pool stress, OOM burst, pattern check
 |   +-- main.c               # Task creation, probe task, scheduler start
 +-- bsp/
 |   +-- startup.c            # ARM Cortex-M4 vector table + Reset_Handler
@@ -133,6 +137,7 @@ Once QEMU is running, type commands directly in your terminal:
 > pools      # Memory pool: free/used blocks, alloc count, OOM count
 > autosar    # AUTOSAR OS category mapping table
 > latency    # Context switch latency: min/max/mean/p99 + CSV dump
+> deadlock   # Trigger AB-BA deadlock demo — MutexGuard prevents it live
 > reset      # Software reset via SCB AIRCR
 > help       # Show all commands
 ```
@@ -158,6 +163,8 @@ python3 scripts/plot_latency.py uart.log
 The `Probe_Task` records `DWT->CYCCNT` before each `vTaskDelayUntil()` and measures the delta on wakeup. The difference between actual and expected wake time is the scheduling jitter. Samples are bucketed into a 7-bin histogram and can be dumped as CSV for offline plotting.
 
 Histogram bins (microseconds): `0-5 | 5-10 | 10-20 | 20-50 | 50-100 | 100-200 | 200+`
+
+![Context switch latency](docs/images/latency_histogram.png)
 
 ### Mutex Guard
 

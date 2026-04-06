@@ -1,5 +1,5 @@
 /*=============================================================================
- * deadlock_demo.c — Week 3
+ * deadlock_demo.c 
  *
  * Classic AB-BA deadlock pattern — detected and prevented by MutexGuard.
  *
