@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 pawanct08
+
 /**
  * @file task_manager.c
  * @brief Task state machine, priority registration, status reporting.

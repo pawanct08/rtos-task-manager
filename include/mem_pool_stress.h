@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 pawanct08
+
 #ifndef MEM_POOL_STRESS_H
 #define MEM_POOL_STRESS_H
 

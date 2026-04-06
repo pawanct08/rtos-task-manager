@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 pawanct08
+
 /**
  * @file uart_cli.h
  * @brief Lightweight UART command-line interface for runtime task inspection.

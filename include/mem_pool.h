@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 pawanct08
+
 /**
  * @file mem_pool.h
  * @brief Fixed-size block memory pool allocator (no heap fragmentation).

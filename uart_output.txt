@@ -1,0 +1,237 @@
+
+================================================
+    RTOS Task Manager — FreeRTOS / Cortex-M4
+    QEMU mps2-an386  |  Weeks 1-4 complete
+================================================
+
+CHK1: TaskManager OK
+CHK2: MutexGuard OK
+CHK3: AutosarOS OK
+CHK4: lp_init OK
+CHK4h: heap OK
+CHK4a: calling xTaskCreate(HighTx)
+CHK4b: xTaskCreate returned
+CHK5: HighTx created
+CHK6: MedCalc created
+CHK7: LowPoll created
+CHK8: Probe created
+
+[DeadlockDemo] Starting AB-BA deadlock scenario...
+[DeadlockDemo] Task A: M1 -> M2 (correct order)
+[DeadlockDemo] Task B: M2 -> M1 (reverse order = deadlock risk)
+[DeadlockDemo] MutexGuard will detect and prevent the cycle.
+
+CHK9: DeadlockDemo started
+[MemStress] Initialising pool stress test...
+[MemStress] Pool: 16 blocks x 32 bytes = 512 bytes total
+[MemStress] Tasks created. Type 'pools' to monitor.
+
+CHK10: MemPoolStress started
+[AUTOSAR] RMS schedulability: U= limit= → SCHEDULABLE
+
+All tasks created. Starting scheduler...
+Type 'help' for commands once running.
+
+
+[DemoA] Round 1 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 1 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+>> UART CLI ready. Type 'help' for commands.
+> 
+[DemoA] Round 2 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 2 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 3 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 3 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 4 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 4 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 5 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 5 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 6 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 6 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 7 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 7 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 8 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 8 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 9 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 9 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 10 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 10 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 11 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[MemStress] === Stress Report ===
+  StressPool    total=16   free=13   used=3    alloc=3749   fail=0
+[MemStress] Corruption events : 0
+[MemStress] Pattern verifies  : 0
+
+[MemStress] Pool integrity: PASS
+
+
+[DemoB] Round 11 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 12 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 12 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 13 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 13 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 14 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 14 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 15 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 15 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 16 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[MemStress] OOM burst: exhausting pool...
+[MemStress] Grabbed 13/16 blocks. Producers should see OOM now.
+
+[DemoB] Round 16 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 17 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 17 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 18 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+[MemStress] Pool released. Producers resuming.
+  StressPool    total=16   free=13   used=3    alloc=6414   fail=3
+
+[DemoB] Round 18 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 19 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 19 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 20 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 20 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 21 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[MemStress] === Stress Report ===
+  StressPool    total=16   free=13   used=3    alloc=7550   fail=3
+[MemStress] Corruption events : 0
+[MemStress] Pattern verifies  : 0
+
+[MemStress] Pool integrity: PASS
+
+
+[DemoB] Round 21 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 22 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 22 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 23 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 23 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 24 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 24 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 25 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 25 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 26 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 26 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 27 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 27 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 28 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 28 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 29 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 29 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.
+
+[DemoA] Round 30 — taking Mutex_1...
+[DemoA] Mutex_1 timeout.
+
+[DemoB] Round 30 — taking Mutex_2...
+[DemoB] Mutex_2 timeout.

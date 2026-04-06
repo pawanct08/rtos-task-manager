@@ -1,6 +1,6 @@
 # RTOS Task Manager
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-ARM%20Cortex--M4-blue)](https://www.arm.com/products/silicon-ip-cpu/cortex-m/cortex-m4)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-green)](https://www.freertos.org/)
 [![Standard](https://img.shields.io/badge/Standard-AUTOSAR%20OS-orange)](https://www.autosar.org/)
@@ -188,4 +188,4 @@ Intrusive free-list — the `next` pointer lives inside the free block itself, s
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache 2.0 — see [LICENSE](LICENSE).

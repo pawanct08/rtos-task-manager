@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 pawanct08
+
 /**
  * @file task_manager.h
  * @brief Priority-based preemptive task manager on FreeRTOS (ARM Cortex-M4)

@@ -1,0 +1,1 @@
+C:\Program Files\qemu\qemu-system-arm.exe: -serial tcp::4444,server: info: QEMU waiting for connection on: disconnected:tcp::::4444,server=on

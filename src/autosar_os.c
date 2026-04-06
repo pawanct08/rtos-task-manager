@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 pawanct08
+
 #include "autosar_os.h"
 #include "uart_cli.h"
 #include "task_manager.h"

@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 pawanct08
+
 #ifndef DEADLOCK_DEMO_H
 #define DEADLOCK_DEMO_H
 

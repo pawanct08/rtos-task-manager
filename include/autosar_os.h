@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 pawanct08
+
 /**
  * @file autosar_os.h
  * @brief AUTOSAR OS abstraction layer mapping FreeRTOS constructs.

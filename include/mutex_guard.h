@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 pawanct08
+
 /**
  * @file mutex_guard.h
  * @brief Mutex wrapper with deadlock detection via resource-allocation graph.
