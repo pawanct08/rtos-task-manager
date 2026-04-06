@@ -37,18 +37,13 @@ if ! command -v git &>/dev/null; then
     exit 1
 fi
 
-if [ ! -d "$FREERTOS_DIR" ]; then
+if [ ! -d "$FREERTOS_DIR/portable/GCC/ARM_CM4F" ]; then
     echo "==> Cloning FreeRTOS-Kernel $FREERTOS_VERSION..."
+    rm -rf "$FREERTOS_DIR"
     git clone -b $FREERTOS_VERSION --depth 1 \
         https://github.com/FreeRTOS/FreeRTOS-Kernel.git $FREERTOS_DIR
 else
     echo "==> FreeRTOS already present in ./$FREERTOS_DIR — skipping."
-fi
-
-if [ ! -d "$FREERTOS_DIR/portable/GCC/ARM_CM4F" ]; then
-    echo "Error: FreeRTOS ARM CM4F portable directory not found!"
-    echo "       Try: rm -rf FreeRTOS-Kernel && ./scripts/setup.sh"
-    exit 1
 fi
 
 # ── Verify ───────────────────────────────────────────────────────────────────

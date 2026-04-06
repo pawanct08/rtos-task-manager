@@ -15,5 +15,8 @@ out/
 *.swo
 *.DS_Store
 
+# FreeRTOS-Kernel (fetched by scripts/setup.sh — do not commit)
+FreeRTOS-Kernel/
+
 # Logs
 *.log
