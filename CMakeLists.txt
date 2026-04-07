@@ -19,7 +19,8 @@ set(CPU_FLAGS "-mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard")
 set(CMAKE_C_FLAGS   "${CPU_FLAGS} -Wall -Wextra -Os -ffunction-sections -fdata-sections -std=c11")
 set(CMAKE_EXE_LINKER_FLAGS
     "${CPU_FLAGS} -T${CMAKE_SOURCE_DIR}/bsp/mps2_an386.ld \
-     -Wl,--gc-sections -Wl,-Map=${PROJECT_NAME}.map --specs=nosys.specs --specs=nano.specs")
+     -Wl,--gc-sections -Wl,-Map=${PROJECT_NAME}.map --specs=nosys.specs --specs=nano.specs \
+     -u _printf_float")
 
 # ── FreeRTOS paths (cloned by scripts/setup.sh) ──────────────────────────────
 set(FREERTOS_DIR ${CMAKE_SOURCE_DIR}/FreeRTOS-Kernel)

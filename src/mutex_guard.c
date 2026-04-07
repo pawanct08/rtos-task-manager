@@ -62,12 +62,8 @@ void MutexGuard_Init(void)
     memset(s_wait,    0, sizeof(s_wait));
     s_mutex_count = 0;
     s_wait_count  = 0;
-#ifndef QEMU_TARGET
     s_guard = xSemaphoreCreateMutex();
     configASSERT(s_guard != NULL);
-#else
-    s_guard = NULL;  /* xSemaphoreCreateMutex() hangs before scheduler on QEMU */
-#endif
 }
 
 int MutexGuard_Create(const char *name)
@@ -76,12 +72,8 @@ int MutexGuard_Create(const char *name)
 
     int idx = s_mutex_count++;
     MutexInfo_t *m = &s_mutexes[idx];
-#ifndef QEMU_TARGET
     m->sem = xSemaphoreCreateMutex();
     configASSERT(m->sem != NULL);
-#else
-    m->sem = NULL;  /* pre-scheduler xSemaphoreCreateMutex hangs on QEMU */
-#endif
     strncpy(m->name, name, sizeof(m->name) - 1);
     m->owner      = NULL;
     m->lock_count = 0;
@@ -126,7 +118,6 @@ BaseType_t MutexGuard_Take(int idx, TickType_t timeout)
     if (s_guard) xSemaphoreGive(s_guard);
 
     /* Now actually block on the semaphore */
-    if (m->sem == NULL) { return pdFALSE; }  /* QEMU: sem not created, skip */
     BaseType_t result = xSemaphoreTake(m->sem, timeout);
 
     /* Remove wait edge */
@@ -155,7 +146,6 @@ void MutexGuard_Give(int idx)
     m->owner = NULL;
     if (s_guard) xSemaphoreGive(s_guard);
 
-    if (m->sem == NULL) { return; }  /* QEMU: sem not created, skip */
     xSemaphoreGive(m->sem);
 }
 

@@ -20,3 +20,15 @@ FreeRTOS-Kernel/
 
 # Logs
 *.log
+
+# Debug scratch / QEMU capture session files
+uart_out.txt
+uart_output.txt
+uart_session.txt
+qemu_err.txt
+qemu_output.txt
+capture_latency.ps1
+data_dump.txt
+gap.txt
+gap_dump.txt
+nm_out.txt
