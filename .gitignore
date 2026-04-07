@@ -18,6 +18,9 @@ out/
 # FreeRTOS-Kernel (fetched by scripts/setup.sh — do not commit)
 FreeRTOS-Kernel/
 
+# Generated documentation (local reference only)
+docs/*.pdf
+
 # Logs
 *.log
 
