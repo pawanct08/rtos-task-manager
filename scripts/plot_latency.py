@@ -21,8 +21,11 @@ from pathlib import Path
 
 
 def parse_csv(text):
+    # Normalize line endings: UART output through WSL produces \r\r\n;
+    # Python text-mode then converts that to \n\n, breaking the regex.
+    text = re.sub(r'\r', '', text)
     match = re.search(
-        r"LATENCY_CSV_START\r?\nsample_us\r?\n(.*?)LATENCY_CSV_END",
+        r"LATENCY_CSV_START\nsample_us\n(.*?)LATENCY_CSV_END",
         text, re.DOTALL
     )
     if not match:
@@ -66,7 +69,8 @@ def plot_matplotlib(samples, output):
                  fontsize=13, fontweight="bold")
 
     # Histogram
-    bins = [0, 5, 10, 20, 50, 100, 200, max(samples) + 1]
+    # Ensure last bin edge is always > 200 (monotonic even when all samples == 0)
+    bins = [0, 5, 10, 20, 50, 100, 200, max(max(samples) + 1, 201)]
     ax1.hist(samples, bins=bins, color="#4C8BF5", edgecolor="white", linewidth=0.6)
     ax1.set_xlabel("Latency (µs)"); ax1.set_ylabel("Count")
     ax1.set_title("Distribution")
@@ -115,7 +119,7 @@ def main():
     if not args.logfile:
         parser.print_help(); sys.exit(1)
 
-    samples = parse_csv(Path(args.logfile).read_text(errors="replace"))
+    samples = parse_csv(Path(args.logfile).read_text(errors="replace", newline=""))
     print(f"Parsed {len(samples)} samples.")
     print_ascii_histogram(samples)
 
